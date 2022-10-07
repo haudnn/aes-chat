@@ -1,31 +1,136 @@
 <html>
   <head>
     <title>Socket.IO chat</title>
-    <link href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
-    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js" integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl" crossorigin="anonymous"></script>
-
+    <link
+      href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css"
+      rel="stylesheet"
+      integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm"
+      crossorigin="anonymous"
+    />
+    <script
+      src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js"
+      integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl"
+      crossorigin="anonymous"
+    ></script>
+    <script src="//ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>
+    <script src="http://crypto-js.googlecode.com/svn/tags/3.1.2/build/components/core-min.js"></script>
+    <script src="http://crypto-js.googlecode.com/svn/tags/3.1.2/build/components/enc-utf16-min.js"></script>
+    <script src="http://crypto-js.googlecode.com/svn/tags/3.1.2/build/components/enc-base64-min.js"></script>
+    <script src="http://crypto-js.googlecode.com/svn/tags/3.1.2/build/rollups/aes.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/3.1.9-1/crypto-js.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/node-rsa@1.1.1/src/NodeRSA.min.js"></script>
+    <script
+      src="https://cdnjs.cloudflare.com/ajax/libs/axios/0.27.2/axios.min.js"
+      integrity="sha512-odNmoc1XJy5x1TMVMdC7EMs3IVdItLPlCeL5vSUPN2llYKMJ2eByTTAIiiuqLg+GdNr9hF6z81p27DArRFKT7A=="
+      crossorigin="anonymous"
+      referrerpolicy="no-referrer"
+    ></script>
+    <link rel="stylesheet" href="./index.css">
   </head>
-  <body>
-    <label for="message" class="h4" style="margin-top: 20px;">Message:</label>
-    <ul id="messages" style="height: 600px; border: solid 1px #cecece; list-style: none;"></ul>
+  <body style="padding: 0 20px ;">
+    <label for="message" class="h4" style="margin-top: 20px">Message:</label>
+    <ul
+      id="messages"
+      style="height: 600px; border: solid 1px #cecece; list-style: none"
+    ></ul>
     <form>
       <div class="form-group">
-        <textarea id="m" class="form-control" rows="5" placeholder="Enter your message" required></textarea>
+        <textarea
+          id="m"
+          class="form-control"
+          rows="5"
+          placeholder="Enter your message"
+          required
+        ></textarea>
+        <!-- <input id="password" type="password" placeholder="Enter private key" /> -->
       </div>
-      <button type="submit" id="form-submit" class="btn btn-success btn-lg pull-right ">Submit</button>
+      <button
+        type="submit"
+        id="form-submit"
+        class="btn btn-success btn-lg pull-right"
+      >
+        Submit
+      </button>
     </form>
-    <script src="/socket.io/socket.io.js"></script>
+    <button class="btnGenarate">Generate Key</button>
+    <div style="margin-top: 20px;">
+      <div style="margin: 20px 0 ;display: flex; align-items: center; ">
+        <label for="" style="margin-right: 20px ;display: inline-block; width: 150px; max-width: 150px;">Public Key Generate:</label>
+        <textarea class="public input" style="width: 500px; display: inline-block; height: 200px;" readonly></textarea>
+      </div>
+      <div style="margin: 20px 0 ;display: flex; align-items: center;">
+        <label for="" style="margin-right: 20px ;display: inline-block; width: 150px; max-width: 150px;">Private Key Generate:</label>
+        <textarea class="private input" readonly  style="width: 500px; display: inline-block; height: 200px;"></textarea>
+      </div>
+      <div style="margin: 20px 0;display: flex; align-items: center; ">
+        <label for="" style="margin-right: 20px ;display: inline-block; width: 150px; max-width: 150px;">Public Key Send:</label>
+        <textarea type="text" class="publickeySend input"  style="width: 500px; display: inline-block; height: 200px;"></textarea>
+      </div>
+    </div>
+    <script src="../socket.io/socket.io.js"></script>
     <script src="https://code.jquery.com/jquery-1.11.1.js"></script>
     <script>
       $(function () {
         var socket = io();
-        $('form').submit(function(){
-          socket.emit('chat message', $('#m').val());
-          $('#m').val('');
+        $(".btnGenarate").click(() => {
+          fetch("http://localhost:3000/key", {
+            method: "GET",
+            headers: {
+              "Content-Type": "application/json",
+            },
+          })
+            .then((response) => response.json())
+            .then((data) => {
+              $(".public").val(data.pubicKey);
+              $(".private").val(data.privateKey);
+            })
+            .catch((error) => {
+              console.error("Error:", error);
+            });
+        });
+        $("form").submit(function (e) {
+          const plaintext = $("#m").val();
+          const publicKey = $(".publickeySend").val();
+          async function fetch() {
+            try {
+              const options = {
+                method: "POST",
+                url: "http://localhost:3000/enc",
+                data: {
+                  text: plaintext,
+                  publicKey,
+                },
+              };
+              await axios(options);
+            } catch (err) {
+              console.log(err);
+            }
+          }
+          fetch();
+          $("#m").val("");
           return false;
         });
-        socket.on('chat message', function(msg){
-          $('#messages').append($('<li>').text(msg));
+        socket.on("chat message", function (msg) {
+          const privateKey = $(".private").val();
+          async function fetch() {
+            try {
+              const options = {
+                method: "POST",
+                url: "http://localhost:3000/dec",
+                data: {
+                  text: msg,
+                  privateKey,
+                },
+              };
+              const { data } = await axios(options);
+              if (data.msg) {
+                $("#messages").append($("<li>").text(data.msg));
+              }
+            } catch (err) {
+              $("#messages").append($("<li>").text(msg));
+            }
+          }
+          fetch();
         });
       });
     </script>
